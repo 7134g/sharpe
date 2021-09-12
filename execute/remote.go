@@ -95,6 +95,10 @@ func GetFundCoreData(u string) (*model.FundCoreSheet, error) {
 		return nil, err
 	}
 
+	if len(bs) == 0 {
+		return nil, HttpTooFastError
+	}
+
 	// 解析html
 	doc, err := htmlquery.Parse(bytes.NewReader(bs))
 	if err != nil {

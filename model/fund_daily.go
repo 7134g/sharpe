@@ -71,6 +71,17 @@ func (d *FundDaily) Upsert() error {
 	}
 }
 
+func FundDailyLen() (int64, error) {
+	dbmux.RLock()
+	defer dbmux.RUnlock()
+	var count int64
+	if err := db.DBconn.Model(&FundDaily{}).Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
 // ShowAllFundDaily 展示所有
 func ShowAllFundDaily(code string) ([]FundDaily, error) {
 	dbmux.RLock()
@@ -89,10 +100,22 @@ func TransactionFundDaily(fds []FundDaily) error {
 	defer dbmux.Unlock()
 	err := db.DBconn.Transaction(func(tx *gorm.DB) error {
 		for _, fd := range fds {
-			err := tx.Create(&fd).Error
-			if err != nil {
-				return err
+			err := db.DBconn.Where("uid = ?", fd.UID).First(&fd).Error
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				err := tx.Create(&fd).Error
+				if err != nil {
+					return err
+				}
+			} else {
+				err := tx.Where("uid = ?", fd.UID).Updates(&fd).Error
+				if err != nil {
+					return err
+				}
 			}
+			//err := tx.Create(&fd).Error
+			//if err != nil {
+			//	return err
+			//}
 		}
 		return nil
 	})

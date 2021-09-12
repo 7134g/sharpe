@@ -1,6 +1,7 @@
 package execute
 
 import (
+	"sharpe/model"
 	"sharpe/pool"
 	"sync"
 )
@@ -11,9 +12,9 @@ var (
 )
 
 // base表任务
-func addTaskFundBase() {
+func addTaskFundInfo() {
 	task := &pool.Task{}
-	task.TaskFunc = runBase
+	task.TaskFunc = runInfo
 	task.Param = []interface{}{}
 	_ = fundPool.Submit(task)
 }
@@ -24,6 +25,13 @@ func addTaskFundDaily(code, name string, page int) {
 	task := &pool.Task{}
 	task.TaskFunc = runFundDaily
 	task.Param = []interface{}{code, name, page}
+	_ = fundPool.Submit(task)
+}
+
+func addTaskFundCore(fb model.FundBase) {
+	task := &pool.Task{}
+	task.TaskFunc = runFundCore
+	task.Param = []interface{}{fb}
 	_ = fundPool.Submit(task)
 }
 

@@ -2,14 +2,20 @@ package execute
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"sharpe/model"
 	"sharpe/pool"
+	"strings"
+	"sync/atomic"
 	"time"
 )
 
 var (
-	fundPool *pool.Pool
+	infoSpider  int64
+	dailySpider int64
+	coreSpider  int64
+	fundPool    *pool.Pool
 )
 
 func init() {
@@ -17,13 +23,14 @@ func init() {
 }
 
 func Execute() {
-	addTaskFundBase()
+	addTaskFundInfo()
 	fundPool.Wait()
 }
 
-func runBase(_ []interface{}) {
+func runInfo(_ []interface{}) {
 	for _, fundType := range fundTypes {
 		for _, timeType := range timeTypes {
+			atomic.AddInt64(&infoSpider, 1)
 			u, err := CreateInfoURL(fundType, timeType)
 			if err != nil {
 				log.Println(err)
@@ -44,24 +51,15 @@ func runBase(_ []interface{}) {
 
 			// save
 			for _, fb := range fbs {
+				fb.FundType = fundType
+
 				// 获取每日数据
 				go addTaskFundDaily(fb.Code, fb.Name, 0)
 
 				// 获取核心数据
-				fc, err := runFundCore(fb.Code)
-				if err != nil {
-					log.Println(err)
-					continue
-				}
-				// 存储基本信息
-				fb.FundType = fundType
-				fb.FundCore = *fc
-				if err := fb.Create(); err != nil {
-					log.Println(err)
-					continue
-				}
+				go addTaskFundCore(fb)
 			}
-
+			atomic.AddInt64(&infoSpider, -1)
 		}
 	}
 
@@ -72,6 +70,10 @@ func runFundDaily(params []interface{}) {
 	name := params[1].(string)
 	page := params[2].(int)
 
+	if page == 1 {
+		atomic.AddInt64(&dailySpider, 1)
+	}
+
 	u, err := CreateDailyURL(code, page)
 	if err != nil {
 		log.Println(err)
@@ -80,6 +82,7 @@ func runFundDaily(params []interface{}) {
 
 	fdSheet, err := GetFundDaily(u)
 	if errors.Is(err, NoDataError) {
+		atomic.AddInt64(&dailySpider, -1)
 		log.Printf("任务完成 ===》 代码：%s, 名称：%s, 页数：%d, url: %s",
 			code, name, page, u)
 		return
@@ -102,13 +105,6 @@ func runFundDaily(params []interface{}) {
 		return
 	}
 
-	//for _, fd := range fds {
-	//	if err := fd.Upsert(); err != nil {
-	//		log.Println(err)
-	//		return
-	//	}
-	//}
-
 	if err := model.TransactionFundDaily(fds); err != nil {
 		log.Println(err)
 		return
@@ -120,14 +116,33 @@ func runFundDaily(params []interface{}) {
 	return
 }
 
-func runFundCore(code string) (*model.FundCore, error) {
-	u := CreateCoreUrl(code)
+func runFundCore(params []interface{}) {
+	atomic.AddInt64(&coreSpider, 1)
+	fb := params[0].(model.FundBase)
+
+	u := CreateCoreUrl(fb.Code)
 	fcSheet, err := GetFundCoreData(u)
+	if errors.Is(err, HttpTooFastError) {
+		go retryTask(runFundCore, params)
+		return
+	}
 	if err != nil {
-		return nil, err
+		log.Println(err)
+		return
 	}
 
 	fc := model.LoadFundCore(fcSheet)
+	fb.FundCore = *fc
 
-	return fc, nil
+	if err := fb.Upsert(); err != nil {
+		if strings.Contains(err.Error(), "UNIQUE") {
+			fmt.Println(u, fc)
+			fmt.Println()
+		}
+		log.Println(err)
+		return
+	}
+	atomic.AddInt64(&coreSpider, -1)
+
+	return
 }

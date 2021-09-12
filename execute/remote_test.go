@@ -21,7 +21,7 @@ func TestGetFundDaily(t *testing.T) {
 }
 
 func TestGetFundCoreData(t *testing.T) {
-	u := `http://fundf10.eastmoney.com/tsdata_519674.html`
+	u := `http://fundf10.eastmoney.com/tsdata_009126.html`
 	fd, err := GetFundCoreData(u)
 	if err != nil {
 		panic(err)

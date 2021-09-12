@@ -8,7 +8,7 @@ var (
 	// 单次获取基金数据量
 	HttpFundCount = 10000
 	// 代理池大小
-	POOLSIDE int32 = 4
+	POOLSIDE int32 = 300
 
 	infoURL = "http://fund.eastmoney.com/data/rankhandler.aspx?" +
 		"op=ph&dt=kf&ft=gp&rs=&gs=0&sc=1yzf&st=desc&pi=1&pn=10000&dx=1"

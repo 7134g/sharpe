@@ -70,12 +70,48 @@ func (b *FundBase) Update() error {
 }
 
 func (b *FundBase) Upsert() error {
-	_, err := b.Get()
+	dbmux.Lock()
+	defer dbmux.Unlock()
+	err := db.DBconn.Where("code = ?", b.Code).First(b).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return b.Create()
+		err := db.DBconn.Create(b).Error
+		if err != nil {
+			return err
+		}
 	} else {
-		return b.Update()
+		err := db.DBconn.Where("code = ?", b.Code).Updates(b).Error
+		if err != nil {
+			return err
+		}
 	}
+	return nil
+}
+
+// TransactionFundBase 事务提交
+func TransactionFundBase(fds []FundBase) error {
+	dbmux.Lock()
+	defer dbmux.Unlock()
+	err := db.DBconn.Transaction(func(tx *gorm.DB) error {
+		for _, fd := range fds {
+			err := db.DBconn.Where("code = ?", fd.Code).First(&fd).Error
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				err := tx.Create(&fd).Error
+				if err != nil {
+					return err
+				}
+			} else {
+				err := tx.Where("code = ?", fd.Code).Updates(&fd).Error
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func FundBaseLen() (int64, error) {

@@ -1,6 +1,7 @@
 package execute
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"sharpe/model"
@@ -17,12 +18,24 @@ func init() {
 func TestExecute(t *testing.T) {
 	ch := make(chan struct{}, 1)
 	go func() {
+		time.Sleep(time.Second * 10)
 		for {
 			select {
 			case <-ch:
 			default:
-				log.Println("error count", getTaskErrorCount())
-				time.Sleep(time.Second)
+				bCount, _ := model.FundBaseLen()
+				dCount, _ := model.FundDailyLen()
+				log.Println(fmt.Sprintf(
+					"\n error: %d poolCount: %d baseTableCount: %d fundTableCount: %d\n"+
+						"taskInfo: %d taskDaily: %d taskCore: %d\n",
+					getTaskErrorCount(),
+					fundPool.Cap(),
+					bCount,
+					dCount,
+					infoSpider,
+					dailySpider,
+					coreSpider))
+				time.Sleep(time.Second * 10)
 			}
 		}
 	}()

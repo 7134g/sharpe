@@ -1,3 +1,4 @@
 /.idea
 fund.db
 go.sum
+*.exe
