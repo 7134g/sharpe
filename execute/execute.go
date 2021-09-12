@@ -52,7 +52,7 @@ func runInfo(_ []interface{}) {
 				fb.FundType = fundType
 
 				// 获取每日数据
-				go addTaskFundDaily(fb.Code, fb.Name, 0)
+				//go addTaskFundDaily(fb.Code, fb.Name, 0)
 
 				// 获取核心数据
 				go addTaskFundCore(fb)

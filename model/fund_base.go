@@ -141,15 +141,22 @@ func ShowAllFundBase(page, size int) ([]FundBase, error) {
 	return fs, nil
 }
 
-func ShowMaxSharpe(key, order string, size int) ([]FundBase, error) {
+func ShowMaxSharpe(fundType, name, order string, size int) ([]FundBase, error) {
 	dbmux.RLock()
 	defer dbmux.RUnlock()
 
 	var tx *gorm.DB
 	fs := make([]FundBase, 0)
-	if key != "" {
-		v := "%" + key + "%"
-		tx = db.DBconn.Where("name LIKE ?", v)
+
+	if fundType != "" {
+		tx = db.DBconn.Where("fund_type = ?", fundType)
+	} else {
+		tx = db.DBconn
+	}
+
+	if name != "" {
+		v := "%" + name + "%"
+		tx = tx.Where("name LIKE ?", v)
 	}
 
 	if size != 0 {

@@ -75,7 +75,8 @@ func PullFund(ctx *BaseContext) {
 }
 
 func MaxSharpe(ctx *BaseContext) {
-	key := ctx.Query("key")
+	name := ctx.Query("name")
+	fType := ctx.Query("fType")
 	tType := ctx.Query("tType")
 	if tType == "" {
 		ctx.JSON(http.StatusOK, errors.New("tType is nil"))
@@ -96,7 +97,15 @@ func MaxSharpe(ctx *BaseContext) {
 		return
 	}
 
-	fbs, err := model.ShowMaxSharpe(key, order, size)
+	switch fType {
+	case "gp", "hh", "zq", "zs":
+		break
+	default:
+		ctx.JSON(http.StatusOK, errors.New("fType is error: "+tType))
+		return
+	}
+
+	fbs, err := model.ShowMaxSharpe(fType, name, order, size)
 	if err != nil {
 		ctx.JSON(http.StatusOK, err)
 		return
@@ -104,6 +113,7 @@ func MaxSharpe(ctx *BaseContext) {
 
 	var result []struct {
 		Name   string
+		Code   string
 		Sharpe float64
 	}
 
@@ -119,8 +129,9 @@ func MaxSharpe(ctx *BaseContext) {
 		}
 		result = append(result, struct {
 			Name   string
+			Code   string
 			Sharpe float64
-		}{Name: fb.Name, Sharpe: sharpe})
+		}{Name: fb.Name, Code: fb.Code, Sharpe: sharpe})
 	}
 
 	ctx.JSON(http.StatusOK, result)

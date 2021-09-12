@@ -2,7 +2,6 @@ package pool
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -142,13 +141,6 @@ func (p *Pool) periodicallyPurge() {
 
 // Submit 提交一个任务
 func (p *Pool) Submit(task *Task) error {
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Println("获取到已经关闭的工人")
-			_ = p.Submit(task)
-			return
-		}
-	}()
 	//没有厂房或厂房已关闭，那么报错
 	if p == nil {
 		return errors.New("this pool is nil")
@@ -166,10 +158,11 @@ func (p *Pool) Submit(task *Task) error {
 
 //安排一个工人
 func (p *Pool) getWorker() *worker {
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	var wk *worker
 	if p.Running() > p.Cap() { //如果超过上限，则清理掉一部分已完成任务的worker
 		for !p.closed {
-			p.lock.Lock()
 			for i, w := range p.workers {
 				//如果是等待任务的状态，可以清理
 				if w.currentStatus() == Waiting {
@@ -178,7 +171,6 @@ func (p *Pool) getWorker() *worker {
 					break
 				}
 			}
-			p.lock.Unlock()
 			if p.Running() <= p.Cap() {
 				break
 			}
@@ -187,18 +179,15 @@ func (p *Pool) getWorker() *worker {
 	if p.Running() == p.Cap() { //如果已到容量上限，则寻找空闲的worker
 	loop:
 		for !p.closed {
-			p.lock.Lock()
 			for _, w := range p.workers {
 				//如果是等待任务的状态，可以分配
 				if w.currentStatus() == Waiting {
 					wk = w
-					p.lock.Unlock()
 					break loop
 				}
 				//等待100微秒
 				time.Sleep(time.Duration(100) * time.Microsecond)
 			}
-			p.lock.Unlock()
 		}
 	} else { //如果没到容量上限，则添加新的workers
 		//招募一个工人
@@ -207,9 +196,7 @@ func (p *Pool) getWorker() *worker {
 			status: Waiting,
 			mtx:    sync.RWMutex{},
 		}
-		p.lock.Lock()
 		p.workers = append(p.workers, wk)
-		p.lock.Unlock()
 		//让工人开始接收任务
 		p.startWork(wk)
 	}
