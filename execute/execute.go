@@ -2,11 +2,9 @@ package execute
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"sharpe/model"
 	"sharpe/pool"
-	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -135,10 +133,6 @@ func runFundCore(params []interface{}) {
 	fb.FundCore = *fc
 
 	if err := fb.Upsert(); err != nil {
-		if strings.Contains(err.Error(), "UNIQUE") {
-			fmt.Println(u, fc)
-			fmt.Println()
-		}
 		log.Println(err)
 		return
 	}

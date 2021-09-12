@@ -16,25 +16,28 @@ func init() {
 }
 
 func TestExecute(t *testing.T) {
+	start := time.Now()
 	ch := make(chan struct{}, 1)
 	go func() {
-		time.Sleep(time.Second * 10)
 		for {
+			end := time.Now()
 			select {
 			case <-ch:
 			default:
+				runningTime := end.Sub(start)
 				bCount, _ := model.FundBaseLen()
 				dCount, _ := model.FundDailyLen()
 				log.Println(fmt.Sprintf(
 					"\n error: %d poolCount: %d baseTableCount: %d fundTableCount: %d\n"+
-						"taskInfo: %d taskDaily: %d taskCore: %d\n",
+						"taskInfo: %d taskDaily: %d taskCore: %d time: %s",
 					getTaskErrorCount(),
 					fundPool.Cap(),
 					bCount,
 					dCount,
 					infoSpider,
 					dailySpider,
-					coreSpider))
+					coreSpider,
+					runningTime.String()))
 				time.Sleep(time.Second * 10)
 			}
 		}

@@ -2,6 +2,7 @@ package pool
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -141,6 +142,13 @@ func (p *Pool) periodicallyPurge() {
 
 // Submit 提交一个任务
 func (p *Pool) Submit(task *Task) error {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("获取到已经关闭的工人")
+			_ = p.Submit(task)
+			return
+		}
+	}()
 	//没有厂房或厂房已关闭，那么报错
 	if p == nil {
 		return errors.New("this pool is nil")
