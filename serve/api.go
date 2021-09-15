@@ -98,7 +98,7 @@ func MaxSharpe(ctx *BaseContext) {
 	}
 
 	switch fType {
-	case "gp", "hh", "zq", "zs":
+	case "gp", "hh", "zq", "zs", "":
 		break
 	default:
 		ctx.JSON(http.StatusOK, errors.New("fType is error: "+tType))
